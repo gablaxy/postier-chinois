@@ -1,3 +1,4 @@
+from pickletools import genops
 import graphviz
 
 class Graphe(object):
@@ -134,7 +135,7 @@ class GraphePondere(Graphe2):
                     aretes.append((sommet, voisin,self._graphe_dict[sommet][voisin]))
         return aretes
 
-    def add_arete(self, arete,val):
+    def add_arete(self, arete, val):
         arete = set(arete)
         arete1, arete2 = tuple(arete)
         for x, y in [(arete1, arete2), (arete2, arete1)]:
@@ -158,69 +159,109 @@ class GraphePondere(Graphe2):
             res += str(origine)+" , "+str(extremite) +" Valeurs " +str(valeurs) +"\n"
         return res
 
+#Fonction qui calcule la distance minimum entre deux points
+def min_dist(lst_noeuds,distance):
+    dist_mini = float("inf")
+    val_mini = -1
+    for noeud in lst_noeuds:
+        if distance[noeud] < dist_mini:
+           dist_mini = distance[noeud]
+           val_mini = noeud
+    return val_mini
 
-def minDist(lstNoeuds,distance):
-    distMini=float("inf")
-    valMini=-1
-    for noeud in lstNoeuds:
-        if distance[noeud]<distMini:
-           distMini=distance[noeud]
-           valMini=noeud
-    return valMini
-
-def Dijkstra(graphe, pDepart) :
+def dijkstra(graphe, p_depart) :
     distance = {sommet:float("inf") for sommet in graphe.all_sommets()} #Tableau qui va stocker l'entièreté des distances des points du graph comparées au point de départ
     precedente = {} #Tableau qui va stoker le chemin optimal
     for elem in graphe.all_sommets() :
         distance[elem] = float("inf") #On initialise toutes les distances à l'infini avant de les calculer
         precedente[elem] = None;
-    distance[pDepart] = 0 #On set la distance du depart vers lui même à 0
+    distance[p_depart] = 0 #On set la distance du depart vers lui même à 0
     noeuds = [sommet for sommet in graphe.all_sommets()]
     while len(noeuds) > 0 :
-        suivant = minDist(noeuds, distance)
-        print(suivant)
+        suivant = min_dist(noeuds, distance)
         noeuds.remove(suivant)
         for voisin in graphe.aretes(suivant) :
-            distanceCumulee = distance[suivant] + graphe.poids(voisin, suivant)
-            if distanceCumulee < distance[voisin] :
-                distance[voisin] = distanceCumulee
+            dist_cumulee = distance[suivant] + graphe.poids(voisin, suivant)
+            if dist_cumulee < distance[voisin] :
+                distance[voisin] = dist_cumulee
                 precedente[voisin] = suivant
     return precedente, distance
 
-def printWGraph(graphe, fn="default") :
-    lstArete = []
+#Fonction qui gère l'affichage avec GraphViz
+def print_weighted_graph(graphe, fn="default") :
+    lst_aretes = []
     g = graphviz.Graph('G', filename=fn)
     for sommet in graphe.all_sommets() : 
         g.node(sommet)
     for arete in graphe.all_aretes() :
-        if (arete not in lstArete) :
+        if (arete not in lst_aretes) :
             g.edge(str(arete[0]), str(arete[1]), weight=str(arete[2]), label=str(arete[2]))
-            lstArete.append((arete[1], arete[0], arete[2]))
+            lst_aretes.append((arete[1], arete[0], arete[2]))
     g.view()
 
+#Fonction qui génère une liste des noeufs à degrés impairs
 def get_odd(graph):
-    return {sommet:graph.sommet_degre(sommet)%2 for sommet in graph.all_sommets()}
+    return [sommet for sommet in graph.all_sommets() if graph.sommet_degre(sommet)%2 == 1]
+
+#Fonction qui génère les couples de points à degrés impairs (marche pas pour l'instant à refaire)
+def gen_pairs(graph):
+    odds = get_odd(graph)
+    pairs = []
+    for i in range(len(odds)-1):
+        pairs.append([])
+        for j in range(i+1,len(odds)):
+            pairs[i].append([odds[i],odds[j]])
+            
+    return pairs
+
+""" #Fonction recursive qui retourne les paires
+def get_pairs(pairs, done = [], final = []):
+   
+    if(pairs[0][0][0] not in done):
+        done.append(pairs[0][0][0])
+        
+        for i in pairs[0]:
+            f = final[:]
+            val = done[:]
+            if(i[1] not in val):
+                f.append(i)
+            else:
+                continue
+            
+            if(len(f)==l):
+                pairings_sum.append(f)
+                return 
+            else:
+                val.append(i[1])
+                get_pairs(pairs[1:],val, f)
+                
+    else:
+        get_pairs(pairs[1:], done, final)
+         """
+
+
+#Fonction qui ajoute la distance aux pairs d'impairs
+""" def gen_weight(graph) :
+    weight = {}
+    for pair in gen_odd(graph) :
+        path, dist = dijkstra(graph, pair[0])
+        weight[tuple(pair) ]= [path[pair[1]], dist[pair[1]]]
+    return weight """
 
 graphDic = {"A" :{"C": 1},
-"B" : {"C" : 2, "E" : 3},
-"C" : {"A" : 1, "B" : 2, "D" : 4, "E" : 2},
-"D" : {"C" : 4},
-"E" : {"C" : 2, "B" : 3}
-}
+            "B" : {"C" : 2, "F" : 3},
+            "C" : {"A" : 1, "B" : 2, "D" : 4, "E" : 2},
+            "D" : {"C" : 4},
+            "E" : {"C" : 2, "F" : 6},
+            "F" : {"B" : 3, "E" : 6}
+            }
 
 g = GraphePondere(graphDic)
 
-s='A'
-d='B'
-p,distance=Dijkstra(g, s)
-l=[d]
-v=d
+print_weighted_graph(g)
+pairs = gen_pairs(g)
+l = (len(pairs)+1)//2
 
-while p[v] is not None:
-    l.append(p[v])
-    v=p[v]
+pairings_sum = []
 
-l.reverse()
-print(l)
-printWGraph(g)
-print(get_odd(g))
+get_pairs(pairs)
